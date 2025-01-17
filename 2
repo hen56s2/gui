@@ -3,32 +3,54 @@ local httpService = game:GetService("HttpService")
 local InterfaceManager = {} do
     InterfaceManager.Folder = "FluentSettings"
     InterfaceManager.Settings = {
-        Theme = "PurplePink", -- Changed default theme
+        Theme = "PurplePink",
         Acrylic = true,
         Transparency = true,
         MenuKeybind = "LeftControl"
     }
 
-    -- Define the custom Purple & Pink theme colors
-    InterfaceManager.CustomTheme = {
-        Primary = Color3.fromRGB(147, 112, 219), -- Medium Purple
-        Secondary = Color3.fromRGB(255, 182, 193), -- Light Pink
-        Background = Color3.fromRGB(40, 30, 50), -- Dark Purple-ish background
-        Accent = Color3.fromRGB(219, 112, 147), -- Pale Violet Red
-        TextColor = Color3.fromRGB(255, 255, 255) -- White text for contrast
+    -- Define available themes
+    InterfaceManager.ThemeList = {
+        "PurplePink",
+        "Dark",
+        "Light"
+    }
+
+    -- Define theme colors
+    InterfaceManager.ThemeColors = {
+        PurplePink = {
+            BackgroundColor3 = Color3.fromRGB(40, 30, 50),
+            SecondaryColor3 = Color3.fromRGB(255, 182, 193),
+            AccentColor3 = Color3.fromRGB(219, 112, 147),
+            TextColor3 = Color3.fromRGB(255, 255, 255),
+            PrimaryColor3 = Color3.fromRGB(147, 112, 219)
+        },
+        Dark = {
+            BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+            SecondaryColor3 = Color3.fromRGB(45, 45, 45),
+            AccentColor3 = Color3.fromRGB(60, 60, 60),
+            TextColor3 = Color3.fromRGB(255, 255, 255),
+            PrimaryColor3 = Color3.fromRGB(80, 80, 80)
+        },
+        Light = {
+            BackgroundColor3 = Color3.fromRGB(240, 240, 240),
+            SecondaryColor3 = Color3.fromRGB(225, 225, 225),
+            AccentColor3 = Color3.fromRGB(210, 210, 210),
+            TextColor3 = Color3.fromRGB(50, 50, 50),
+            PrimaryColor3 = Color3.fromRGB(195, 195, 195)
+        }
     }
 
     function InterfaceManager:SetFolder(folder)
-        self.Folder = folder;
+        self.Folder = folder
         self:BuildFolderTree()
     end
 
     function InterfaceManager:SetLibrary(library)
         self.Library = library
-        -- Add the custom theme to the library's theme options
-        if library.Themes then
-            library.Themes["PurplePink"] = self.CustomTheme
-        end
+        -- Add themes to library
+        self.Library.Themes = self.ThemeColors
+        self.Library.ThemeList = self.ThemeList
     end
 
     function InterfaceManager:BuildFolderTree()
@@ -51,7 +73,7 @@ local InterfaceManager = {} do
     end
 
     function InterfaceManager:SaveSettings()
-        writefile(self.Folder .. "/options.json", httpService:JSONEncode(InterfaceManager.Settings))
+        writefile(self.Folder .. "/options.json", httpService:JSONEncode(self.Settings))
     end
 
     function InterfaceManager:LoadSettings()
@@ -60,9 +82,9 @@ local InterfaceManager = {} do
             local data = readfile(path)
             local success, decoded = pcall(httpService.JSONDecode, httpService, data)
 
-            if success then
+            if success and type(decoded) == "table" then
                 for i, v in next, decoded do
-                    InterfaceManager.Settings[i] = v
+                    self.Settings[i] = v
                 end
             end
         end
@@ -71,56 +93,74 @@ local InterfaceManager = {} do
     function InterfaceManager:BuildInterfaceSection(tab)
         assert(self.Library, "Must set InterfaceManager.Library")
         local Library = self.Library
-        local Settings = InterfaceManager.Settings
+        local Settings = self.Settings
 
-        InterfaceManager:LoadSettings()
+        self:LoadSettings()
 
-        local section = tab:AddSection("Interface")
+        local section = tab:AddSection({
+            Name = "Interface",
+            Type = "Section"
+        })
 
-        local InterfaceTheme = section:AddDropdown("InterfaceTheme", {
-            Title = "Theme",
-            Description = "Changes the interface theme.",
-            Values = Library.Themes,
+        local InterfaceTheme = section:AddDropdown({
+            Name = "Theme",
+            Flag = "InterfaceTheme",
+            List = self.ThemeList,
             Default = Settings.Theme,
             Callback = function(Value)
-                Library:SetTheme(Value)
-                Settings.Theme = Value
-                InterfaceManager:SaveSettings()
+                if self.ThemeColors[Value] then
+                    Library:SetTheme(self.ThemeColors[Value])
+                    Settings.Theme = Value
+                    self:SaveSettings()
+                end
             end
         })
 
-        InterfaceTheme:SetValue(Settings.Theme)
-    
         if Library.UseAcrylic then
-            section:AddToggle("AcrylicToggle", {
-                Title = "Acrylic",
-                Description = "The blurred background requires graphic quality 8+",
+            section:AddToggle({
+                Name = "Acrylic",
+                Flag = "AcrylicToggle",
                 Default = Settings.Acrylic,
                 Callback = function(Value)
                     Library:ToggleAcrylic(Value)
                     Settings.Acrylic = Value
-                    InterfaceManager:SaveSettings()
+                    self:SaveSettings()
                 end
             })
         end
-    
-        section:AddToggle("TransparentToggle", {
-            Title = "Transparency",
-            Description = "Makes the interface transparent.",
+
+        section:AddToggle({
+            Name = "Transparency",
+            Flag = "TransparentToggle",
             Default = Settings.Transparency,
             Callback = function(Value)
                 Library:ToggleTransparency(Value)
                 Settings.Transparency = Value
-                InterfaceManager:SaveSettings()
+                self:SaveSettings()
             end
         })
-    
-        local MenuKeybind = section:AddKeybind("MenuKeybind", { Title = "Minimize Bind", Default = Settings.MenuKeybind })
-        MenuKeybind:OnChanged(function()
-            Settings.MenuKeybind = MenuKeybind.Value
-            InterfaceManager:SaveSettings()
-        end)
+
+        local MenuKeybind = section:AddKeybind({
+            Name = "Menu Key",
+            Flag = "MenuKeybind",
+            Default = Settings.MenuKeybind,
+            Callback = function(Value)
+                Settings.MenuKeybind = Value
+                self:SaveSettings()
+            end
+        })
+
         Library.MinimizeKeybind = MenuKeybind
+    end
+
+    -- Initialize with default theme
+    function InterfaceManager:Initialize()
+        if self.Library then
+            self:LoadSettings()
+            if self.ThemeColors[self.Settings.Theme] then
+                self.Library:SetTheme(self.ThemeColors[self.Settings.Theme])
+            end
+        end
     end
 end
 
