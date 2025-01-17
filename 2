@@ -3,28 +3,19 @@ local httpService = game:GetService("HttpService")
 local InterfaceManager = {} do
     InterfaceManager.Folder = "FluentSettings"
     InterfaceManager.Settings = {
-        Theme = "Purple", -- Changed default theme
+        Theme = "PurplePink", -- Changed default theme
         Acrylic = true,
         Transparency = true,
         MenuKeybind = "LeftControl"
     }
 
-    -- Custom theme definitions
-    InterfaceManager.CustomThemes = {
-        Purple = {
-            BackgroundColor = Color3.fromRGB(147, 112, 219), -- Light purple
-            SecondaryBackgroundColor = Color3.fromRGB(138, 43, 226), -- Purple
-            AccentColor = Color3.fromRGB(255, 182, 193), -- Pink
-            TextColor = Color3.fromRGB(255, 255, 255), -- White
-            InactiveTextColor = Color3.fromRGB(200, 200, 200), -- Light gray
-        },
-        Pink = {
-            BackgroundColor = Color3.fromRGB(255, 192, 203), -- Pink
-            SecondaryBackgroundColor = Color3.fromRGB(255, 105, 180), -- Hot pink
-            AccentColor = Color3.fromRGB(147, 112, 219), -- Purple
-            TextColor = Color3.fromRGB(255, 255, 255), -- White
-            InactiveTextColor = Color3.fromRGB(200, 200, 200), -- Light gray
-        }
+    -- Define the custom Purple & Pink theme colors
+    InterfaceManager.CustomTheme = {
+        Primary = Color3.fromRGB(147, 112, 219), -- Medium Purple
+        Secondary = Color3.fromRGB(255, 182, 193), -- Light Pink
+        Background = Color3.fromRGB(40, 30, 50), -- Dark Purple-ish background
+        Accent = Color3.fromRGB(219, 112, 147), -- Pale Violet Red
+        TextColor = Color3.fromRGB(255, 255, 255) -- White text for contrast
     }
 
     function InterfaceManager:SetFolder(folder)
@@ -34,9 +25,9 @@ local InterfaceManager = {} do
 
     function InterfaceManager:SetLibrary(library)
         self.Library = library
-        -- Add custom themes to library themes
-        for themeName, themeColors in pairs(self.CustomThemes) do
-            library.Themes[themeName] = themeColors
+        -- Add the custom theme to the library's theme options
+        if library.Themes then
+            library.Themes["PurplePink"] = self.CustomTheme
         end
     end
 
@@ -99,7 +90,7 @@ local InterfaceManager = {} do
         })
 
         InterfaceTheme:SetValue(Settings.Theme)
-
+    
         if Library.UseAcrylic then
             section:AddToggle("AcrylicToggle", {
                 Title = "Acrylic",
@@ -112,7 +103,7 @@ local InterfaceManager = {} do
                 end
             })
         end
-
+    
         section:AddToggle("TransparentToggle", {
             Title = "Transparency",
             Description = "Makes the interface transparent.",
@@ -123,7 +114,7 @@ local InterfaceManager = {} do
                 InterfaceManager:SaveSettings()
             end
         })
-
+    
         local MenuKeybind = section:AddKeybind("MenuKeybind", { Title = "Minimize Bind", Default = Settings.MenuKeybind })
         MenuKeybind:OnChanged(function()
             Settings.MenuKeybind = MenuKeybind.Value
